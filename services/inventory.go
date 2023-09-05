@@ -66,15 +66,15 @@ func CreateInventory(in []*models.Inventory) (*mongo.InsertManyResult, error) {
 	}
 	// fmt.Println(inventory)
 	n := 0
-	for j:=0;j<len(in);j++ {
-		for i:=n;i<10;i++{
+	for j := 0; j < len(in); j++ {
+		for i := n; i < n+10; i++ {
 			in[j].Skus = append(in[j].Skus, inventory[i])
 		}
-		n=n+10
+		n = n + 10
 	}
 	fmt.Println("in", in)
 	inv := []interface{}{}
-	for v:=0; v<len(in);v++ {
+	for v := 0; v < len(in); v++ {
 		inv = append(inv, in[v])
 	}
 	// inv := []interface{}(in)
@@ -85,4 +85,43 @@ func CreateInventory(in []*models.Inventory) (*mongo.InsertManyResult, error) {
 	}
 	// fmt.Println(res)
 	return res, nil
+}
+
+func DeleteItems(item string, sku string, quantity float64) string {
+	// filter := bson.D{{Key: "item", Value: item}, {Key: "skus.sku", Value: sku}}
+	// update := bson.D{
+	//     {Key: "$skus", Value: bson.D{
+	//         {Key: "$elemMatch", Value: bson.D{
+	//             {Key: "quantity", Value: bson.D{
+	//                 {Key: "$inc", Value: -quantity},
+	//             }},
+	//         }},
+	//     }},
+	// }
+
+	// // fv := bson.M{"$set": bson.M{"skus.quantity": quantity}}
+	// _,err := InventoryContext().UpdateOne(context.Background(), filter, update)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return "failed"
+	// }
+	// return "success"
+	filter := bson.D{
+        {"item", item},
+        {"skus.sku", sku}, // Match the specific SKU within the "skus" array by SKU name.
+    }
+
+    update := bson.D{
+        {"$inc", bson.D{
+            {"skus.$.quantity", -quantity}, // Decrement the "quantity" field by decrementAmount.
+        }},
+    }
+
+    _, err := InventoryContext().UpdateOne(context.Background(), filter, update)
+    if err != nil {
+        return "failed"
+    }
+
+    return "success"
+
 }
