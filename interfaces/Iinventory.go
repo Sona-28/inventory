@@ -6,6 +6,8 @@ import (
 )
 
 type Inventory interface {
-	   GetInventoryByID(id int64) (*models.Inventory, error)
-	   CreateInventory(i *models.Inventory) (*mongo.InsertOneResult, error)
+	CreateInventory(in []*models.Inventory) (*mongo.InsertManyResult, error)
+	DeleteItems(item string, sku string, quantity float64) (string)
+	GetAllItems() ([]models.Inventory, error) 
+	GetInventoryItemByItemName(itemName string) (*models.Inventory, error)
 }

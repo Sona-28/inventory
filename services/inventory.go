@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"inventory/config"
+	"inventory/interfaces"
 	"inventory/models"
 	"time"
 
@@ -12,31 +13,18 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// type Invent struct {
-// 	ctx             context.Context
-// 	mongoCollection *mongo.Collection
-// }
-
-// func InitInventory(collection *mongo.Collection, ctx context.Context) interfaces.Inventory {
-// 	return &Invent{ctx, collection}
-// }
-
-func InventoryContext() *mongo.Collection {
-	return config.GetCollection("inventory_SKU", "inventory")
+type Invent struct {
+	ctx             context.Context
+	mongoCollection *mongo.Collection
 }
 
-// func (i *Invent) GetInventoryByID(id int64) (*models.Inventory, error) {
-// 	filter := bson.D{{Key: "_id", Value: id}}
-// 	var inventory *models.Inventory
-// 	res := i.mongoCollection.FindOne(i.ctx, filter)
-// 	err := res.Decode(&inventory)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return inventory, nil
-// }
+func InitInventory(collection *mongo.Collection, ctx context.Context) interfaces.Inventory {
+	return &Invent{ctx, collection}
+}
 
-func CreateInventory(in []*models.Inventory) (*mongo.InsertManyResult, error) {
+
+
+func (i *Invent) CreateInventory(in []*models.Inventory) (*mongo.InsertManyResult, error) {
 
 	mcoll := config.GetCollection("inventory_SKU", "items")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -78,34 +66,15 @@ func CreateInventory(in []*models.Inventory) (*mongo.InsertManyResult, error) {
 		inv = append(inv, in[v])
 	}
 	// inv := []interface{}(in)
-	res, err := InventoryContext().InsertMany(context.Background(), inv)
+	res, err := i.mongoCollection.InsertMany(context.Background(), inv)
 	if err != nil {
 		fmt.Println("error4")
 		return nil, err
 	}
-	// fmt.Println(res)
 	return res, nil
 }
 
-func DeleteItems(item string, sku string, quantity float64) string {
-	// filter := bson.D{{Key: "item", Value: item}, {Key: "skus.sku", Value: sku}}
-	// update := bson.D{
-	//     {Key: "$skus", Value: bson.D{
-	//         {Key: "$elemMatch", Value: bson.D{
-	//             {Key: "quantity", Value: bson.D{
-	//                 {Key: "$inc", Value: -quantity},
-	//             }},
-	//         }},
-	//     }},
-	// }
-
-	// // fv := bson.M{"$set": bson.M{"skus.quantity": quantity}}
-	// _,err := InventoryContext().UpdateOne(context.Background(), filter, update)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return "failed"
-	// }
-	// return "success"
+func (i *Invent) DeleteItems(item string, sku string, quantity float64) string {
 	filter := bson.D{
 		{"item", item},
 		{"skus.sku", sku},
@@ -114,11 +83,11 @@ func DeleteItems(item string, sku string, quantity float64) string {
 
 	update := bson.D{
 		{"$inc", bson.D{
-			{"skus.$.quantity", -quantity}, // Decrement the "quantity" field by decrementAmount.
+			{Key: "skus.$.quantity", Value: -quantity}, // Decrement the "quantity" field by decrementAmount.
 		}},
 	}
 	fmt.Println("hello")
-	_, err := InventoryContext().UpdateOne(context.Background(), filter, update)
+	_, err := i.mongoCollection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		return "failed"
 	}
@@ -127,24 +96,20 @@ func DeleteItems(item string, sku string, quantity float64) string {
 
 }
 
-func GetAllItems() ([]models.Inventory, error) {
+func (i *Invent) GetAllItems() ([]models.Inventory, error) {
 	filter := bson.D{} // An empty filter matches all documents.
 
-	cursor, err := InventoryContext().Find(context.Background(), filter)
+	cursor, err := i.mongoCollection.Find(context.Background(), filter)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(context.Background())
 
 	var results []models.Inventory
-	// var results1 []models.Inventory_SKU
-
-	// fmt.Println(cursor)
 
 	for cursor.Next(context.Background()) {
 		var result models.Inventory
 		if err := cursor.Decode(&result); err != nil {
-			//	fmt.Println(result.Skus)
 			return nil, err
 		}
 		results = append(results, result)
@@ -155,29 +120,15 @@ func GetAllItems() ([]models.Inventory, error) {
 		return nil, err
 	}
 
-	// var skus []*models.Inventory_SKU
-	// for _, data := range results {
-	//     skus = append(skus, data.Skus...)
-	// }
-	// fmt.Println(skus)
 	return results, nil
 }
 
-//	func GetAllInventory()(*models.Inventory,error){
-//		filter := bson.D{}
-//		var orders *models.Inventory
-//		res := InventoryContext().FindOne(context.Background(), filter)
-//		err := res.Decode(&orders)
-//		if err!=nil{
-//		return nil,err
-//		}
-//		return orders,nil
-//		}
-func GetInventoryItemByItemName(itemName string) (*models.Inventory, error) {
+
+func (i *Invent) GetInventoryItemByItemName(itemName string) (*models.Inventory, error) {
 	filter := bson.D{{Key: "item", Value: itemName}}
 	fmt.Println("done")
 	var result models.Inventory
-	err := InventoryContext().FindOne(context.Background(), filter).Decode(&result)
+	err := i.mongoCollection.FindOne(context.Background(), filter).Decode(&result)
 	if err != nil {
 		fmt.Println("error in decoding")
 		return nil, err
