@@ -7,7 +7,7 @@ type Inventory struct {
 	Item       string   `json:"item" bson:"item"`
 	Features   []string `json:"features" bson:"features"`
 	Categories []string `json:"categories" bson:"categories"`
-	Skus       []*Inventory_SKU   `json:"skus" bson:"skus"`
+	Skus       []Inventory_SKU   `json:"skus" bson:"skus"`
 }
 
 type Inventory_SKU struct {

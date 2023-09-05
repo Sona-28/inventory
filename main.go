@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 	"inventory/interfaces"
+
 	// "inventory/models"
 	"inventory/services"
 )
 
 var IService interfaces.Inventory
 
-func main(){
+func main() {
 	// client, _ := config.ConnectDataBase()
 	// mcoll := client.Database("inventory_SKU").Collection("inventory")
 	// services.InitInventory(mcoll, context.Background())
@@ -53,6 +54,26 @@ func main(){
 	// 	fmt.Println(err.Error())
 	// }
 	// fmt.Println(res)
-	res := services.DeleteItems("shirts","SKU002", 2.0)
-	fmt.Println(res)
+
+
+
+	// res := services.DeleteItems("shirts","SKU002", 122.0)
+	// fmt.Println(res)
+
+
+	res, err := services.GetAllItems()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	for _, item := range res {
+		fmt.Println(item.Item)
+	}
+
+
+	// res, err :=services.GetInventoryItemByItemName("shirts")
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// }
+	// fmt.Println(res)
+
 }

@@ -42,7 +42,7 @@ func CreateInventory(in []*models.Inventory) (*mongo.InsertManyResult, error) {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	filter := bson.D{}
 	result, err := mcoll.Find(ctx, filter, options.Find())
-	var inventory []*models.Inventory_SKU
+	var inventory []models.Inventory_SKU
 	// fmt.Println(result)
 	if err != nil {
 		fmt.Println("error1")
@@ -51,7 +51,7 @@ func CreateInventory(in []*models.Inventory) (*mongo.InsertManyResult, error) {
 		return nil, err
 	}
 	for result.Next(ctx) {
-		post := &models.Inventory_SKU{}
+		post := models.Inventory_SKU{}
 		err := result.Decode(post)
 		if err != nil {
 			fmt.Println("error2")
@@ -107,21 +107,83 @@ func DeleteItems(item string, sku string, quantity float64) string {
 	// }
 	// return "success"
 	filter := bson.D{
-        {"item", item},
-        {"skus.sku", sku}, // Match the specific SKU within the "skus" array by SKU name.
-    }
+		{"item", item},
+		{"skus.sku", sku},
+		{"skus.quantity", bson.D{{"$gte", quantity}}}, // Match the specific SKU within the "skus" array by SKU name.
+	}
 
-    update := bson.D{
-        {"$inc", bson.D{
-            {"skus.$.quantity", -quantity}, // Decrement the "quantity" field by decrementAmount.
-        }},
-    }
+	update := bson.D{
+		{"$inc", bson.D{
+			{"skus.$.quantity", -quantity}, // Decrement the "quantity" field by decrementAmount.
+		}},
+	}
+	fmt.Println("hello")
+	_, err := InventoryContext().UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return "failed"
+	}
 
-    _, err := InventoryContext().UpdateOne(context.Background(), filter, update)
-    if err != nil {
-        return "failed"
-    }
+	return "success"
 
-    return "success"
+}
 
+func GetAllItems() ([]models.Inventory, error) {
+	filter := bson.D{} // An empty filter matches all documents.
+
+	cursor, err := InventoryContext().Find(context.Background(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var results []models.Inventory
+	// var results1 []models.Inventory_SKU
+
+	// fmt.Println(cursor)
+
+	for cursor.Next(context.Background()) {
+		var result models.Inventory
+		if err := cursor.Decode(&result); err != nil {
+			//	fmt.Println(result.Skus)
+			return nil, err
+		}
+		results = append(results, result)
+
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	// var skus []*models.Inventory_SKU
+	// for _, data := range results {
+	//     skus = append(skus, data.Skus...)
+	// }
+	// fmt.Println(skus)
+	return results, nil
+}
+
+//	func GetAllInventory()(*models.Inventory,error){
+//		filter := bson.D{}
+//		var orders *models.Inventory
+//		res := InventoryContext().FindOne(context.Background(), filter)
+//		err := res.Decode(&orders)
+//		if err!=nil{
+//		return nil,err
+//		}
+//		return orders,nil
+//		}
+func GetInventoryItemByItemName(itemName string) (*models.Inventory, error) {
+	filter := bson.D{{Key: "item", Value: itemName}}
+	fmt.Println("done")
+	var result models.Inventory
+	err := InventoryContext().FindOne(context.Background(), filter).Decode(&result)
+	if err != nil {
+		fmt.Println("error in decoding")
+		return nil, err
+	
+	}
+	fmt.Println(result.Features)
+	
+	return &result, nil
 }
