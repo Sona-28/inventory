@@ -97,6 +97,8 @@ func (i *Invent) DeleteItems(item string, sku string, quantity float64) string {
 }
 
 func (i *Invent) GetAllItems() ([]models.Inventory, error) {
+	fmt.Println("GetAllItems2")
+
 	filter := bson.D{} // An empty filter matches all documents.
 
 	cursor, err := i.mongoCollection.Find(context.Background(), filter)
@@ -110,6 +112,7 @@ func (i *Invent) GetAllItems() ([]models.Inventory, error) {
 	for cursor.Next(context.Background()) {
 		var result models.Inventory
 		if err := cursor.Decode(&result); err != nil {
+
 			return nil, err
 		}
 		results = append(results, result)
@@ -117,6 +120,8 @@ func (i *Invent) GetAllItems() ([]models.Inventory, error) {
 	}
 
 	if err := cursor.Err(); err != nil {
+		fmt.Println("err")
+
 		return nil, err
 	}
 
