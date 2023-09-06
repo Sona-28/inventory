@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package inventory;
 
-option go_package = "github.com/Sona-28/netxd_project";
+option go_package = "github.com/Sona-28/inventory/proto";
 
 message Price {
  float base = 1;
