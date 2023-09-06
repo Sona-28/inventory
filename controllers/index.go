@@ -3,10 +3,13 @@ package rpcService
 import (
 	"context"
 	"fmt"
+	"inventory/config"
 	"inventory/interfaces"
+	"inventory/models"
 	pb "inventory/proto"
 	"sync"
-
+	sv "github.com/20-VIGNESH-K/inventory_SKU/services"
+	it "github.com/20-VIGNESH-K/inventory_SKU/interfaces"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -16,6 +19,7 @@ type RPCServer struct {
 }
 
 var (
+	ItemService it.IUpdateInventory
 	InventoryService interfaces.Inventory
 	Mcoll            *mongo.Collection
 )
@@ -112,4 +116,66 @@ func (s *RPCServer) GetInventoryItemByItemName(ctx context.Context, req *pb.Item
 	return inventory, nil
 }
 
+func (s *RPCServer) CreateInventory(ctx context.Context, req *pb.AllInventoryItems) (*pb.String, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// fmt.Println(req)
+	// fmt.Println("%T",req.Items[0].Skus[0].Price.Base)
+	mreq := []*models.Inventory{}
+	for i := 0; i < len(req.Items); i++ {
+		ivs := []models.Inventory_SKU{}
+		for j := 0; j < len(req.Items[i].Skus); j++ {
+			ivt := models.Inventory_SKU{
+				Sku: req.Items[i].Skus[j].Sku,
+				Price: models.Price_type{
+					Base:     req.Items[i].Skus[j].Price.Base,
+					Currency: req.Items[i].Skus[j].Price.Currency,
+					Discount: req.Items[i].Skus[j].Price.Discount,
+				},
+				Quantity: req.Items[i].Skus[j].Quantity,
+				Options: models.Options_type{
+					Size: models.Size_type{
+						H: req.Items[i].Skus[j].Options.Size.H,
+						L: req.Items[i].Skus[j].Options.Size.L,
+						W: req.Items[i].Skus[j].Options.Size.W,
+					},
+					Features: req.Items[i].Skus[j].Options.Features,
+					Colors:   req.Items[i].Skus[j].Options.Colors,
+					Ruling:   req.Items[i].Skus[j].Options.Ruling,
+					Image:    req.Items[i].Skus[j].Options.Image,
+				},
+			}
+			ivs = append(ivs, ivt)
+		}
+		iv := models.Inventory{
+			ID:         req.Items[i].Id,
+			Item:       req.Items[i].Item,
+			Features:   req.Items[i].Features,
+			Categories: req.Items[i].Categories,
+			Skus:       ivs,
+		}
+		mreq = append(mreq, &iv)
+	}
+	_, err := InventoryService.CreateInventory(mreq)
+	if err != nil {
+		return nil, err
+	}
+return &pb.String{
+	Msg: "Successfully created",
+},nil
 
+}
+func (s *RPCServer) UpdateInventory(ctx context.Context, req *pb.ItemToDelete) (*pb.String, error) {
+	inventoryCollection := config.GetCollection("inventory_SKU", "items")
+	inventoryService := sv.NewUpdatedInventoryServiceInit(inventoryCollection)
+	ItemService = inventoryService
+	res := InventoryService.DeleteItems(req.Item, req.Sku, req.Quantity)
+	err := ItemService.UpdatedInventory(req.Sku, req.Quantity)
+	if err!=nil{
+		return nil,err
+	}
+	return &pb.String{
+		Msg: res,
+	}, nil
+
+}

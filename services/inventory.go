@@ -25,12 +25,12 @@ func InitInventory(collection *mongo.Collection, ctx context.Context) interfaces
 
 
 func (i *Invent) CreateInventory(in []*models.Inventory) (*mongo.InsertManyResult, error) {
-
+	// fmt.Println(in[0])
 	mcoll := config.GetCollection("inventory_SKU", "items")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	filter := bson.D{}
 	result, err := mcoll.Find(ctx, filter, options.Find())
-	var inventory []models.Inventory_SKU
+	var inventory []*models.Inventory_SKU
 	// fmt.Println(result)
 	if err != nil {
 		fmt.Println("error1")
@@ -39,11 +39,12 @@ func (i *Invent) CreateInventory(in []*models.Inventory) (*mongo.InsertManyResul
 		return nil, err
 	}
 	for result.Next(ctx) {
-		post := models.Inventory_SKU{}
+		post := &models.Inventory_SKU{}
 		err := result.Decode(post)
 		if err != nil {
-			fmt.Println("error2")
-
+			fmt.Println("Error decoding document:", err)
+			// Print the problematic document or relevant information for debugging.
+			fmt.Println("Document:", result.Current)
 			return nil, err
 		}
 		inventory = append(inventory, post)
@@ -52,11 +53,11 @@ func (i *Invent) CreateInventory(in []*models.Inventory) (*mongo.InsertManyResul
 		fmt.Println("error3")
 		return nil, err
 	}
-	// fmt.Println(inventory)
+	fmt.Println(inventory)
 	n := 0
 	for j := 0; j < len(in); j++ {
 		for i := n; i < n+10; i++ {
-			in[j].Skus = append(in[j].Skus, inventory[i])
+			in[j].Skus = append(in[j].Skus, *inventory[i])
 		}
 		n = n + 10
 	}
@@ -74,24 +75,25 @@ func (i *Invent) CreateInventory(in []*models.Inventory) (*mongo.InsertManyResul
 	return res, nil
 }
 
-func (i *Invent) DeleteItems(item string, sku string, quantity float64) string {
+func (i *Invent) DeleteItems(item string, sku string, quantity float32) string {
 	filter := bson.D{
-		{"item", item},
-		{"skus.sku", sku},
-		{"skus.quantity", bson.D{{"$gte", quantity}}}, // Match the specific SKU within the "skus" array by SKU name.
+		{Key: "item", Value: item},
+		{Key: "skus.sku", Value: sku},
+		{Key: "skus.quantity", Value: bson.D{{Key: "$gte", Value: quantity}}}, // Match the specific SKU within the "skus" array by SKU name.
 	}
 
 	update := bson.D{
-		{"$inc", bson.D{
+		{Key:  "$inc", Value: bson.D{
 			{Key: "skus.$.quantity", Value: -quantity}, // Decrement the "quantity" field by decrementAmount.
 		}},
 	}
-	fmt.Println("hello")
-	_, err := i.mongoCollection.UpdateOne(context.Background(), filter, update)
+	// fmt.Println("hello")
+	res, err := i.mongoCollection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
+		fmt.Println(err)
 		return "failed"
 	}
-
+	fmt.Println(res)
 	return "success"
 
 }

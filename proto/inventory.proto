@@ -5,15 +5,15 @@ package inventory;
 option go_package = "github.com/Sona-28/netxd_project";
 
 message Price {
- int64 base = 1;
+ float base = 1;
  string currency = 2;
- int64 discount = 3;
+ float discount = 3;
 }
 
 message Size {
- int64 h = 1;
- int64 l = 2;
- int64 w = 3;
+    float h = 1;
+    float l = 2;
+    float w = 3;
 }
 
 message Options {
@@ -25,10 +25,10 @@ message Options {
 }
 
 message InventorySKU {
- int64 id = 1;
+//  int64 id = 1;
  string sku = 2;
  Price price = 3;
- int64 quantity = 4;
+ float quantity = 4;
  Options options = 5;
 }
 
@@ -41,7 +41,8 @@ message InventoryItem {
 }
 
 service InventoryService {
-
+ rpc CreateInventory(AllInventoryItems) returns (String);
+ rpc UpdateInventory(ItemToDelete) returns (String);
  rpc GetAllItems(Empty) returns (AllInventoryItems);
  rpc GetInventoryItemByItemName(ItemName) returns (InventoryItem);
 }
@@ -49,7 +50,7 @@ service InventoryService {
 message ItemToDelete {
  string item = 1;
  string sku = 2;
- int64 quantity = 3;
+ float quantity = 3;
 }
 
 message String {
