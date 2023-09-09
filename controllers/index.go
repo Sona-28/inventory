@@ -78,6 +78,7 @@ func (s *RPCServer) GetAllItems(ctx context.Context, req *pb.Empty) (*pb.AllInve
 func (s *RPCServer) GetInventoryItemByItemName(ctx context.Context, req *pb.ItemName) (*pb.InventoryItem, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	fmt.Println(req.ItemName)
 	res, err := InventoryService.GetInventoryItemByItemName(req.ItemName)
 	if err != nil {
 		return nil, err
@@ -176,6 +177,41 @@ func (s *RPCServer) UpdateInventory(ctx context.Context, req *pb.ItemToDelete) (
 	}
 	return &pb.String{
 		Msg: res,
+	}, nil
+
+}
+
+func (s *RPCServer) AddItems(ctx context.Context, res *pb.AllInventorySKUItems) (*pb.String, error) {
+	ivs := []*models.Inventory_SKU{}
+	for j := 0; j < len(res.Items); j++ {
+		ivt := &models.Inventory_SKU{
+			Sku: res.Items[j].Sku,
+			Price: models.Price_type{
+				Base:     res.Items[j].Price.Base,
+				Currency: res.Items[j].Price.Currency,
+				Discount: res.Items[j].Price.Discount,
+			},
+			Quantity: res.Items[j].Quantity,
+			Options: models.Options_type{
+				Size: models.Size_type{
+					H: res.Items[j].Options.Size.H,
+					L: res.Items[j].Options.Size.L,
+					W: res.Items[j].Options.Size.W,
+				},
+				Features: res.Items[j].Options.Features,
+				Colors:   res.Items[j].Options.Colors,
+				Ruling:   res.Items[j].Options.Ruling,
+				Image:    res.Items[j].Options.Image,
+			},
+		}
+		ivs = append(ivs, ivt)
+	}
+	req := InventoryService.AddItems(res.Name, ivs)
+	if req == "failed"{
+		return nil,fmt.Errorf("failed to add items")
+	}
+	return &pb.String{
+		Msg: req,
 	}, nil
 
 }

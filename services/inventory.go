@@ -22,8 +22,6 @@ func InitInventory(collection *mongo.Collection, ctx context.Context) interfaces
 	return &Invent{ctx, collection}
 }
 
-
-
 func (i *Invent) CreateInventory(in []*models.Inventory) (*mongo.InsertManyResult, error) {
 	// fmt.Println(in[0])
 	mcoll := config.GetCollection("inventory_SKU", "items")
@@ -43,8 +41,6 @@ func (i *Invent) CreateInventory(in []*models.Inventory) (*mongo.InsertManyResul
 		err := result.Decode(post)
 		if err != nil {
 			fmt.Println("Error decoding document:", err)
-			// Print the problematic document or relevant information for debugging.
-			fmt.Println("Document:", result.Current)
 			return nil, err
 		}
 		inventory = append(inventory, post)
@@ -53,13 +49,17 @@ func (i *Invent) CreateInventory(in []*models.Inventory) (*mongo.InsertManyResul
 		fmt.Println("error3")
 		return nil, err
 	}
-	fmt.Println(inventory)
 	n := 0
 	for j := 0; j < len(in); j++ {
-		for i := n; i < n+10; i++ {
-			in[j].Skus = append(in[j].Skus, *inventory[i])
+		for i := n; i < len(inventory); i++ {
+
+			if in[j].Item == inventory[i].Options.Ruling {
+
+				in[j].Skus = append(in[j].Skus, *inventory[i])
+			}
+
 		}
-		n = n + 10
+		// n = n + 10
 	}
 	fmt.Println("in", in)
 	inv := []interface{}{}
@@ -83,7 +83,7 @@ func (i *Invent) DeleteItems(item string, sku string, quantity float32) string {
 	}
 
 	update := bson.D{
-		{Key:  "$inc", Value: bson.D{
+		{Key: "$inc", Value: bson.D{
 			{Key: "skus.$.quantity", Value: -quantity}, // Decrement the "quantity" field by decrementAmount.
 		}},
 	}
@@ -130,7 +130,6 @@ func (i *Invent) GetAllItems() ([]models.Inventory, error) {
 	return results, nil
 }
 
-
 func (i *Invent) GetInventoryItemByItemName(itemName string) (*models.Inventory, error) {
 	filter := bson.D{{Key: "item", Value: itemName}}
 	fmt.Println("done")
@@ -139,9 +138,26 @@ func (i *Invent) GetInventoryItemByItemName(itemName string) (*models.Inventory,
 	if err != nil {
 		fmt.Println("error in decoding")
 		return nil, err
-	
+
 	}
 	fmt.Println(result.Features)
-	
+
 	return &result, nil
+}
+
+func (i *Invent) AddItems(name string, in []*models.Inventory_SKU) (string){
+	filter := bson.D{{Key: "item", Value: name}}
+	update := bson.D{
+		{Key: "$push", Value: bson.D{
+			{Key: "skus", Value: in[0]}, // Decrement the "quantity" field by decrementAmount.
+		}},
+	}
+	// fmt.Println("hello")
+	res, err := i.mongoCollection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		fmt.Println(err)
+		return "failed"
+	}
+	fmt.Println(res)
+	return "success"
 }

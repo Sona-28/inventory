@@ -22,6 +22,7 @@ type InventoryServiceClient interface {
 	UpdateInventory(ctx context.Context, in *ItemToDelete, opts ...grpc.CallOption) (*String, error)
 	GetAllItems(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*AllInventoryItems, error)
 	GetInventoryItemByItemName(ctx context.Context, in *ItemName, opts ...grpc.CallOption) (*InventoryItem, error)
+	AddItems(ctx context.Context, in *AllInventorySKUItems, opts ...grpc.CallOption) (*String, error)
 }
 
 type inventoryServiceClient struct {
@@ -68,6 +69,15 @@ func (c *inventoryServiceClient) GetInventoryItemByItemName(ctx context.Context,
 	return out, nil
 }
 
+func (c *inventoryServiceClient) AddItems(ctx context.Context, in *AllInventorySKUItems, opts ...grpc.CallOption) (*String, error) {
+	out := new(String)
+	err := c.cc.Invoke(ctx, "/inventory.InventoryService/AddItems", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // InventoryServiceServer is the server API for InventoryService service.
 // All implementations must embed UnimplementedInventoryServiceServer
 // for forward compatibility
@@ -76,6 +86,7 @@ type InventoryServiceServer interface {
 	UpdateInventory(context.Context, *ItemToDelete) (*String, error)
 	GetAllItems(context.Context, *Empty) (*AllInventoryItems, error)
 	GetInventoryItemByItemName(context.Context, *ItemName) (*InventoryItem, error)
+	AddItems(context.Context, *AllInventorySKUItems) (*String, error)
 	mustEmbedUnimplementedInventoryServiceServer()
 }
 
@@ -94,6 +105,9 @@ func (UnimplementedInventoryServiceServer) GetAllItems(context.Context, *Empty) 
 }
 func (UnimplementedInventoryServiceServer) GetInventoryItemByItemName(context.Context, *ItemName) (*InventoryItem, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetInventoryItemByItemName not implemented")
+}
+func (UnimplementedInventoryServiceServer) AddItems(context.Context, *AllInventorySKUItems) (*String, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddItems not implemented")
 }
 func (UnimplementedInventoryServiceServer) mustEmbedUnimplementedInventoryServiceServer() {}
 
@@ -180,6 +194,24 @@ func _InventoryService_GetInventoryItemByItemName_Handler(srv interface{}, ctx c
 	return interceptor(ctx, in, info, handler)
 }
 
+func _InventoryService_AddItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AllInventorySKUItems)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InventoryServiceServer).AddItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/inventory.InventoryService/AddItems",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InventoryServiceServer).AddItems(ctx, req.(*AllInventorySKUItems))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // InventoryService_ServiceDesc is the grpc.ServiceDesc for InventoryService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -202,6 +234,10 @@ var InventoryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetInventoryItemByItemName",
 			Handler:    _InventoryService_GetInventoryItemByItemName_Handler,
+		},
+		{
+			MethodName: "AddItems",
+			Handler:    _InventoryService_AddItems_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
